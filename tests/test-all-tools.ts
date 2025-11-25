@@ -3,7 +3,7 @@
  * Tests each tool with real data to verify functionality
  */
 
-import { AaveClient } from './src/aave-client.js';
+import { AaveClient } from '../src/aave-client.js';
 
 // Using public RPC endpoint
 const PUBLIC_RPC = 'https://eth.llamarpc.com';
@@ -75,14 +75,14 @@ async function runTests() {
     if (reserves.length > 0) {
       testPass(`Retrieved ${reserves.length} reserves`);
 
-      const wethReserve = reserves.find(r => r.tokenAddress.toLowerCase() === KNOWN_ASSETS.WETH.toLowerCase());
+      const wethReserve = reserves.find((r: any) => r.tokenAddress.toLowerCase() === KNOWN_ASSETS.WETH.toLowerCase());
       if (wethReserve) {
         testPass(`Found WETH reserve: ${wethReserve.symbol}`);
       } else {
         testFail('WETH reserve not found');
       }
 
-      if (reserves.every(r => r.symbol && r.tokenAddress)) {
+      if (reserves.every((r: any) => r.symbol && r.tokenAddress)) {
         testPass('All reserves have symbol and address');
       } else {
         testFail('Some reserves missing data');
@@ -179,7 +179,7 @@ async function runTests() {
 
     testPass(`Retrieved positions (${positions.collateral.length} collateral, ${positions.debt.length} debt)`);
 
-    if (positions.collateral.every(p => p.symbol && p.asset)) {
+    if (positions.collateral.every((p: any) => p.symbol && p.asset)) {
       testPass('All collateral positions have required fields');
     } else {
       testFail('Some collateral positions missing data');
@@ -225,7 +225,7 @@ async function runTests() {
       testFail(`Expected ${addresses.length} results, got ${results.length}`);
     }
 
-    if (results.every(r => r.address)) {
+    if (results.every((r: any) => r.address)) {
       testPass('All batch results have addresses');
     } else {
       testFail('Some batch results missing addresses');

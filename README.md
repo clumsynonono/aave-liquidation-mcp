@@ -4,12 +4,40 @@ A Model Context Protocol (MCP) server for analyzing Aave V3 liquidation opportun
 
 ## Features
 
-- **Health Factor Monitoring**: Check user account health and liquidation status
-- **Liquidation Analysis**: Detailed analysis of liquidation opportunities with risk levels
-- **Position Tracking**: View user collateral and debt positions across all Aave assets
-- **Reserve Information**: Query available Aave V3 reserves and their configurations
-- **Price Data**: Get real-time asset prices from Aave oracle
-- **Protocol Status**: Monitor Aave V3 protocol health and status
+### 🔍 Health Factor Monitoring
+- **Real-time health factor calculation** for any Ethereum address
+- **Multi-threshold risk detection**:
+  - HEALTHY: Health Factor > 1.05
+  - AT_RISK: 1.0 < HF < 1.05
+  - LIQUIDATABLE: HF < 1.0
+- **Automatic risk level classification** (HIGH, MEDIUM, LOW)
+- **Account summary** with collateral, debt, and borrow capacity
+
+### 💰 Liquidation Analysis
+- **Detailed position breakdown** by asset
+- **Profit estimation** for liquidation opportunities
+- **Collateral and debt composition** analysis
+- **Liquidation bonus calculation** (asset-specific)
+- **Risk scoring** based on multiple factors
+
+### 📊 Position Tracking
+- **Complete portfolio view** for any address
+- **Asset-by-asset breakdown** of deposits and borrows
+- **Collateral status** for each asset
+- **Real-time balance updates** from on-chain data
+
+### 🔢 Batch Operations
+- **Check up to 20 addresses simultaneously**
+- **Parallel processing** for faster results
+- **Summary statistics** (liquidatable count, at-risk count, etc.)
+- **Bulk risk assessment** for portfolio monitoring
+
+### 💲 Price & Protocol Data
+- **Real-time asset prices** from Aave oracle
+- **USD-denominated values** for all positions
+- **Reserve (asset) listing** with full configuration
+- **LTV, liquidation thresholds, and bonuses** by asset
+- **Current block number** for data verification
 
 ## What Makes This Different
 
@@ -89,6 +117,21 @@ Add this server to your Claude Desktop configuration file:
 ```
 
 Replace `/ABSOLUTE/PATH/TO/` with the actual path to your installation.
+
+## Quick Demo Scripts
+
+Test the server functionality without MCP configuration:
+
+```bash
+# Get current ETH price
+npm run demo:price
+
+# View all Aave reserves (categorized)
+npm run demo:reserves
+
+# Run comprehensive connection test
+npm run test:real-data
+```
 
 ## Available Tools (8 Total)
 
@@ -250,6 +293,26 @@ Once configured with Claude Desktop, you can ask questions like:
 **Validation:**
 - "Is this a valid Ethereum address: 0x123..."
 - "Validate these addresses before I check them"
+
+## Setup Verification
+
+After installing and configuring the server, restart Claude Desktop and verify it's working:
+
+**Ask Claude:**
+```
+Can you check the Aave protocol status?
+```
+
+Claude will use the `get_protocol_status` tool and should return something like:
+```json
+{
+  "protocol": "Aave V3",
+  "network": "Ethereum Mainnet",
+  "blockNumber": 18500000,
+  "poolAddress": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+  "status": "operational"
+}
+```
 
 ## Understanding the Data
 
