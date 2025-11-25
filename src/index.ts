@@ -179,6 +179,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
 
+        if (!aaveClient.isValidAddress(address)) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            'Invalid Ethereum address format'
+          );
+        }
+
         const accountData = await aaveClient.getUserAccountData(address);
 
         return {
@@ -227,6 +234,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
 
+        if (!aaveClient.isValidAddress(address)) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            'Invalid Ethereum address format'
+          );
+        }
+
         const opportunity = await aaveClient.analyzeLiquidationOpportunity(address);
 
         if (!opportunity) {
@@ -263,6 +277,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new McpError(
             ErrorCode.InvalidParams,
             'address parameter is required and must be a string'
+          );
+        }
+
+        if (!aaveClient.isValidAddress(address)) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            'Invalid Ethereum address format'
           );
         }
 
@@ -327,6 +348,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
 
+        if (!aaveClient.isValidAddress(assetAddress)) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            'Invalid Ethereum address format'
+          );
+        }
+
         const price = await aaveClient.getAssetPrice(assetAddress);
 
         return {
@@ -386,7 +414,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         // Validate all addresses first
-        const invalidAddresses = addresses.filter((addr) => !aaveClient.isValidAddress(addr));
+        const invalidAddresses = addresses.filter(
+          (addr) => typeof addr !== 'string' || !aaveClient.isValidAddress(addr)
+        );
         if (invalidAddresses.length > 0) {
           throw new McpError(
             ErrorCode.InvalidParams,

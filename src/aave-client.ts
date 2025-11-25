@@ -195,9 +195,9 @@ export class AaveClient {
     // Calculate risk level
     const hf = parseFloat(accountData.healthFactorFormatted);
     let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
-    if (hf < 1.0) {
+    if (hf < LIQUIDATION_THRESHOLD) {
       riskLevel = 'HIGH';
-    } else if (hf < 1.02) {
+    } else if (hf < WARNING_THRESHOLD) {
       riskLevel = 'MEDIUM';
     } else {
       riskLevel = 'LOW';
@@ -283,7 +283,7 @@ export class AaveClient {
 
       const { aTokenAddress } = await this.dataProviderContract.getReserveTokensAddresses(assetAddress);
       const aTokenContract = new ethers.Contract(aTokenAddress, ERC20_ABI, this.provider);
-      const totalSupply = await aTokenContract.balanceOf(aTokenAddress);
+      const totalSupply = await aTokenContract.totalSupply();
 
       return {
         symbol: reserve.symbol,
