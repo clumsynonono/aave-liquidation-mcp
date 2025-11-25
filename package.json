@@ -10,11 +10,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node build/index.js",
+    "start": "node build/src/index.js",
     "prepare": "npm run build",
-    "test:real-data": "node build/test-real-data.js",
-    "demo:price": "node build/demo-get-price.js",
-    "demo:reserves": "node build/demo-get-reserves.js",
+    "test:real-data": "node build/src/test-real-data.js",
+    "demo:price": "node build/src/demo-get-price.js",
+    "demo:reserves": "node build/src/demo-get-reserves.js",
     "test:all": "node build/tests/test-all-tools.js"
   },
   "keywords": [

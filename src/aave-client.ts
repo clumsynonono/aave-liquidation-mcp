@@ -105,6 +105,7 @@ export class AaveClient {
           usageAsCollateralEnabled: userReserve.usageAsCollateralEnabled,
           balanceFormatted: ethers.formatUnits(userReserve.currentATokenBalance, decimals),
           debtFormatted: ethers.formatUnits(totalDebt, decimals),
+          liquidationBonus: reserve.liquidationBonus,
         };
 
         if (userReserve.currentATokenBalance > 0n) {
@@ -208,11 +209,30 @@ export class AaveClient {
     const totalDebtUSD = ethers.formatUnits(accountData.totalDebtBase, 8);
     const availableBorrowsUSD = ethers.formatUnits(accountData.availableBorrowsBase, 8);
 
-    // Calculate potential profit (simplified: liquidation bonus is typically 5-10%)
+    // Calculate potential profit with actual liquidation bonus
     let potentialProfit = '0';
     if (accountData.isLiquidatable) {
       const debtValue = parseFloat(totalDebtUSD);
-      const estimatedBonus = debtValue * 0.05; // Assume 5% liquidation bonus
+
+      // Find the collateral asset with the highest liquidation bonus
+      // In a real liquidation, the liquidator chooses which collateral to seize
+      let maxBonus = 0;
+      if (collateral.length > 0) {
+        // liquidationBonus is in basis points (e.g., 10500 for 5% bonus)
+        // We need to subtract 10000 to get the bonus part
+        maxBonus = Math.max(...collateral.map(c => Number(c.liquidationBonus) - 10000));
+      }
+
+      // If no collateral or bonus < 0 (shouldn't happen), assume 0
+      const bonusPercentage = maxBonus > 0 ? maxBonus / 10000 : 0;
+
+      // Max liquidation is usually 50% of debt, but for simplicity we calculate bonus on full debt
+      // or total collateral, whichever is smaller
+      const totalCollateralValue = parseFloat(totalCollateralUSD);
+      const maxLiquidatableDebt = debtValue * 0.5;
+      const liquidatableAmount = Math.min(maxLiquidatableDebt, totalCollateralValue);
+
+      const estimatedBonus = liquidatableAmount * bonusPercentage;
       potentialProfit = estimatedBonus.toFixed(2);
     }
 
@@ -227,6 +247,7 @@ export class AaveClient {
       debtAssets: debt,
       potentialProfit,
       riskLevel,
+      gasWarning: 'Profit calculation does not include Gas costs. Actual profit will be lower.',
     };
   }
 
@@ -281,17 +302,39 @@ export class AaveClient {
         return null;
       }
 
-      const { aTokenAddress } = await this.dataProviderContract.getReserveTokensAddresses(assetAddress);
+      const { aTokenAddress, variableDebtTokenAddress, stableDebtTokenAddress } =
+        await this.dataProviderContract.getReserveTokensAddresses(assetAddress);
+
       const aTokenContract = new ethers.Contract(aTokenAddress, ERC20_ABI, this.provider);
       const totalSupply = await aTokenContract.totalSupply();
+
+      const reserveData = await this.dataProviderContract.getReserveData(assetAddress);
+
+      // Calculate total borrow (stable + variable)
+      const totalStableDebt = reserveData.totalStableDebt;
+      const totalVariableDebt = reserveData.totalVariableDebt;
+      const totalBorrow = totalStableDebt + totalVariableDebt;
+
+      // Calculate utilization rate
+      const totalSupplyVal = parseFloat(ethers.formatUnits(totalSupply, reserve.decimals));
+      const totalBorrowVal = parseFloat(ethers.formatUnits(totalBorrow, reserve.decimals));
+
+      let utilizationRate = '0%';
+      if (totalSupplyVal > 0) {
+        utilizationRate = ((totalBorrowVal / totalSupplyVal) * 100).toFixed(2) + '%';
+      }
+
+      // APYs are in ray (1e27)
+      const supplyAPY = (parseFloat(ethers.formatUnits(reserveData.liquidityRate, 27)) * 100).toFixed(2) + '%';
+      const borrowAPY = (parseFloat(ethers.formatUnits(reserveData.variableBorrowRate, 27)) * 100).toFixed(2) + '%';
 
       return {
         symbol: reserve.symbol,
         totalSupply: ethers.formatUnits(totalSupply, reserve.decimals),
-        totalBorrow: '0', // Would need additional contract calls
-        utilizationRate: '0%',
-        supplyAPY: '0%',
-        borrowAPY: '0%',
+        totalBorrow: ethers.formatUnits(totalBorrow, reserve.decimals),
+        utilizationRate,
+        supplyAPY,
+        borrowAPY,
       };
     } catch (error) {
       return null;
