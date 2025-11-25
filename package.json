@@ -1,0 +1,35 @@
+{
+  "name": "aave-liquidation-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for analyzing Aave liquidation opportunities on Ethereum mainnet",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "aave-liquidation-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node build/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "aave",
+    "liquidation",
+    "defi",
+    "ethereum",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "ethers": "^6.13.4",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
