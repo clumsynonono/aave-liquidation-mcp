@@ -284,7 +284,9 @@ export class AaveClient {
       totalCollateralUSD,
       totalDebtUSD,
       availableBorrowsUSD,
-      liquidationThreshold: ethers.formatUnits(accountData.currentLiquidationThreshold, 4),
+      liquidationThreshold: (
+        Number(ethers.formatUnits(accountData.currentLiquidationThreshold, 4)) || 0
+      ).toFixed(2),
       collateralAssets: collateral,
       debtAssets: debt,
       potentialProfit,
