@@ -110,6 +110,7 @@ export class AaveClient {
           currentStableDebt: userReserve.currentStableDebt,
           currentVariableDebt: userReserve.currentVariableDebt,
           usageAsCollateralEnabled: userReserve.usageAsCollateralEnabled,
+          decimals,
           balanceFormatted: ethers.formatUnits(userReserve.currentATokenBalance, decimals),
           debtFormatted: ethers.formatUnits(totalDebt, decimals),
           liquidationBonus: reserve.liquidationBonus,
@@ -234,37 +235,47 @@ export class AaveClient {
     let potentialProfit = '0';
     if (accountData.isLiquidatable) {
       const debtValue = parseFloat(totalDebtUSD);
-      const totalCollateralValue = parseFloat(totalCollateralUSD);
 
-      // Find the collateral asset with the highest liquidation bonus
-      // In a real liquidation, the liquidator chooses which collateral to seize
-      let maxBonus = 0;
-      if (collateral.length > 0) {
-        // liquidationBonus is in basis points (e.g., 10500 for 5% bonus)
-        // We need to subtract 10000 to get the bonus part
-        maxBonus = Math.max(...collateral.map(c => Number(c.liquidationBonus) - 10000));
-      }
-
-      // If no collateral or bonus < 0 (shouldn't happen), assume 0
-      const bonusPercentage = maxBonus > 0 ? maxBonus / 10000 : 0;
-
-      // Calculate maximum liquidatable debt considering both close factor and available collateral
-      // Close factor: Can liquidate up to 50% of debt
+      // Close factor: can liquidate up to 50% of debt
       const maxDebtByCloseFactor = debtValue * 0.5;
 
-      // Collateral constraint: Need enough collateral to cover debt + bonus
-      // If liquidator pays D debt, they receive D * (1 + bonus) collateral
-      // So max debt they can liquidate is: totalCollateral / (1 + bonus)
-      const maxDebtByCollateral = bonusPercentage > 0
-        ? totalCollateralValue / (1 + bonusPercentage)
-        : totalCollateralValue;
+      // Fetch prices for collateral assets to avoid overstating profit
+      const priceMap = collateral.length
+        ? await this.getAssetsPrices(collateral.map((c) => c.asset))
+        : new Map<string, string>();
 
-      // Actual liquidatable debt is the smaller of the two constraints
-      const actualLiquidatableDebt = Math.min(maxDebtByCloseFactor, maxDebtByCollateral);
+      let bestEstimatedProfit = 0;
 
-      // Profit = liquidatable debt * bonus percentage
-      const estimatedBonus = actualLiquidatableDebt * bonusPercentage;
-      potentialProfit = estimatedBonus.toFixed(2);
+      for (const c of collateral) {
+        const priceStr = priceMap.get(c.asset);
+        const price = priceStr ? parseFloat(priceStr) : 0;
+        if (!price) {
+          continue;
+        }
+
+        // Convert collateral balance to USD using token decimals and oracle price (8 decimals)
+        const collateralAmount = parseFloat(ethers.formatUnits(c.currentATokenBalance, c.decimals));
+        const collateralValueUSD = collateralAmount * price;
+
+        // liquidationBonus is in bps, e.g. 10500 => 5% bonus
+        const bonusPercentage = Math.max(0, Number(c.liquidationBonus) - 10000) / 10000;
+        if (bonusPercentage <= 0) {
+          continue;
+        }
+
+        // Debt that can be covered by this collateral considering bonus
+        const maxDebtByCollateral = collateralValueUSD / (1 + bonusPercentage);
+
+        // Actual liquidatable debt for this collateral
+        const liquidatableDebt = Math.min(maxDebtByCloseFactor, maxDebtByCollateral, debtValue);
+        const estimatedProfit = liquidatableDebt * bonusPercentage;
+
+        if (estimatedProfit > bestEstimatedProfit) {
+          bestEstimatedProfit = estimatedProfit;
+        }
+      }
+
+      potentialProfit = bestEstimatedProfit.toFixed(2);
     }
 
     return {
@@ -295,25 +306,34 @@ export class AaveClient {
   async batchAnalyzeLiquidation(
     addresses: string[]
   ): Promise<BatchAnalysisResult[]> {
-    const results = await Promise.allSettled(
-      addresses.map(async (address) => ({
-        address,
-        opportunity: await this.analyzeLiquidationOpportunity(address),
-      }))
-    );
+    const results: BatchAnalysisResult[] = new Array(addresses.length);
+    const concurrency = Math.min(5, addresses.length);
+    let currentIndex = 0;
 
-    return results.map((result, index) => {
-      if (result.status === 'fulfilled') {
-        return result.value;
-      } else {
-        // Return error information for failed addresses
-        return {
-          address: addresses[index],
-          opportunity: null,
-          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
-        };
+    const worker = async () => {
+      while (true) {
+        const idx = currentIndex++;
+        if (idx >= addresses.length) {
+          break;
+        }
+
+        const address = addresses[idx];
+        try {
+          const opportunity = await this.analyzeLiquidationOpportunity(address);
+          results[idx] = { address, opportunity };
+        } catch (error) {
+          results[idx] = {
+            address,
+            opportunity: null,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
       }
-    });
+    };
+
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+    return results;
   }
 
   /**
