@@ -4,9 +4,13 @@
  */
 
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
 
-// Using a public RPC endpoint (rate-limited but free for testing)
-const PUBLIC_RPC = 'https://eth.llamarpc.com';
+// Load environment variables
+dotenv.config();
+
+// Using environment variable with fallback to public RPC endpoint
+const PUBLIC_RPC = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
 
 // Real Aave V3 Pool contract on Ethereum mainnet
 const AAVE_V3_POOL = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';

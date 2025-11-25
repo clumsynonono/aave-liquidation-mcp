@@ -4,9 +4,14 @@
  */
 
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const AAVE_V3_ORACLE = '0x54586bE62E3c3580375aE3723C145253060Ca0C2';
+const RPC_URL = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
 
 const ORACLE_ABI = [
   'function getAssetPrice(address asset) external view returns (uint256)',
@@ -16,7 +21,7 @@ async function getETHPrice() {
   try {
     console.log('🔍 Fetching ETH price from Aave V3 Oracle...\n');
 
-    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
     const oracleContract = new ethers.Contract(AAVE_V3_ORACLE, ORACLE_ABI, provider);
 
     const priceRaw = await oracleContract.getAssetPrice(WETH_ADDRESS);

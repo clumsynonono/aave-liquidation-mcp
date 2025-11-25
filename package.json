@@ -1,11 +1,11 @@
 {
   "name": "aave-liquidation-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for analyzing Aave liquidation opportunities on Ethereum mainnet",
   "type": "module",
-  "main": "build/index.js",
+  "main": "build/src/index.js",
   "bin": {
-    "aave-liquidation-mcp": "build/index.js"
+    "aave-liquidation-mcp": "build/src/index.js"
   },
   "scripts": {
     "build": "tsc",

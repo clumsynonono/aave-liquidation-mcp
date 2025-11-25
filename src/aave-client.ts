@@ -28,6 +28,11 @@ export class AaveClient {
   private dataProviderContract: ethers.Contract;
   private oracleContract: ethers.Contract;
 
+  // Cache for reserves data (reduces RPC calls)
+  private reserveCache: ReserveData[] | null = null;
+  private reserveCacheTime: number = 0;
+  private readonly CACHE_TTL = 60000; // 1 minute cache
+
   constructor(rpcUrl: string) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.poolContract = new ethers.Contract(
@@ -72,6 +77,7 @@ export class AaveClient {
 
   /**
    * Get user reserves (collateral and debt positions)
+   * Optimized with parallel queries for better performance
    */
   async getUserReserves(userAddress: string): Promise<{
     collateral: UserReserveData[];
@@ -81,21 +87,21 @@ export class AaveClient {
     const collateral: UserReserveData[] = [];
     const debt: UserReserveData[] = [];
 
-    for (const reserve of reserves) {
-      const userReserve = await this.dataProviderContract.getUserReserveData(
-        reserve.tokenAddress,
-        userAddress
-      );
+    // Parallel query all user reserves
+    const userReservePromises = reserves.map(reserve =>
+      this.dataProviderContract.getUserReserveData(reserve.tokenAddress, userAddress)
+    );
+    const userReservesData = await Promise.all(userReservePromises);
 
+    // Process results
+    for (let i = 0; i < reserves.length; i++) {
+      const reserve = reserves[i];
+      const userReserve = userReservesData[i];
       const totalDebt = userReserve.currentStableDebt + userReserve.currentVariableDebt;
 
       if (userReserve.currentATokenBalance > 0n || totalDebt > 0n) {
-        const tokenContract = new ethers.Contract(
-          reserve.tokenAddress,
-          ERC20_ABI,
-          this.provider
-        );
-        const decimals = await tokenContract.decimals();
+        // Use cached decimals from reserves
+        const decimals = reserve.decimals;
 
         const data: UserReserveData = {
           asset: reserve.tokenAddress,
@@ -123,35 +129,48 @@ export class AaveClient {
 
   /**
    * Get all available reserves in Aave V3
+   * Optimized with caching and parallel queries
    */
   async getAllReserves(): Promise<ReserveData[]> {
+    // Return cached data if still valid
+    const now = Date.now();
+    if (this.reserveCache && (now - this.reserveCacheTime) < this.CACHE_TTL) {
+      return this.reserveCache;
+    }
+
     const reserveTokens = await this.dataProviderContract.getAllReservesTokens();
-    const reserves: ReserveData[] = [];
 
-    for (const reserve of reserveTokens) {
-      const config = await this.dataProviderContract.getReserveConfigurationData(
-        reserve.tokenAddress
-      );
+    // Parallel query all configurations and decimals
+    const configPromises = reserveTokens.map((reserve: { tokenAddress: string }) =>
+      this.dataProviderContract.getReserveConfigurationData(reserve.tokenAddress)
+    );
+    const decimalsPromises = reserveTokens.map((reserve: { tokenAddress: string }) => {
+      const tokenContract = new ethers.Contract(reserve.tokenAddress, ERC20_ABI, this.provider);
+      return tokenContract.decimals();
+    });
 
-      const tokenContract = new ethers.Contract(
-        reserve.tokenAddress,
-        ERC20_ABI,
-        this.provider
-      );
-      const decimals = await tokenContract.decimals();
+    const [configs, decimalsList] = await Promise.all([
+      Promise.all(configPromises),
+      Promise.all(decimalsPromises),
+    ]);
 
-      reserves.push({
+    const reserves: ReserveData[] = reserveTokens.map(
+      (reserve: { symbol: string; tokenAddress: string }, index: number) => ({
         symbol: reserve.symbol,
         tokenAddress: reserve.tokenAddress,
-        decimals: Number(decimals),
-        ltv: config.ltv,
-        liquidationThreshold: config.liquidationThreshold,
-        liquidationBonus: config.liquidationBonus,
-        usageAsCollateralEnabled: config.usageAsCollateralEnabled,
-        borrowingEnabled: config.borrowingEnabled,
-        isActive: config.isActive,
-      });
-    }
+        decimals: Number(decimalsList[index]),
+        ltv: configs[index].ltv,
+        liquidationThreshold: configs[index].liquidationThreshold,
+        liquidationBonus: configs[index].liquidationBonus,
+        usageAsCollateralEnabled: configs[index].usageAsCollateralEnabled,
+        borrowingEnabled: configs[index].borrowingEnabled,
+        isActive: configs[index].isActive,
+      })
+    );
+
+    // Update cache
+    this.reserveCache = reserves;
+    this.reserveCacheTime = now;
 
     return reserves;
   }
