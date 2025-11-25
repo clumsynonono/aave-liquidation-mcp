@@ -14,6 +14,7 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
+import { ethers } from 'ethers';
 import { AaveClient } from './aave-client.js';
 
 // Load environment variables
@@ -196,19 +197,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 {
                   address: accountData.address,
                   healthFactor: accountData.healthFactorFormatted,
-                  totalCollateralUSD: (
-                    parseFloat(accountData.totalCollateralBase.toString()) / 1e8
+                  totalCollateralUSD: parseFloat(
+                    ethers.formatUnits(accountData.totalCollateralBase, 8)
                   ).toFixed(2),
-                  totalDebtUSD: (
-                    parseFloat(accountData.totalDebtBase.toString()) / 1e8
+                  totalDebtUSD: parseFloat(
+                    ethers.formatUnits(accountData.totalDebtBase, 8)
                   ).toFixed(2),
-                  availableBorrowsUSD: (
-                    parseFloat(accountData.availableBorrowsBase.toString()) / 1e8
+                  availableBorrowsUSD: parseFloat(
+                    ethers.formatUnits(accountData.availableBorrowsBase, 8)
                   ).toFixed(2),
-                  liquidationThreshold: (
-                    parseFloat(accountData.currentLiquidationThreshold.toString()) / 1e4
+                  liquidationThreshold: parseFloat(
+                    ethers.formatUnits(accountData.currentLiquidationThreshold, 4)
                   ).toFixed(2),
-                  ltv: (parseFloat(accountData.ltv.toString()) / 1e4).toFixed(2),
+                  ltv: parseFloat(
+                    ethers.formatUnits(accountData.ltv, 4)
+                  ).toFixed(2),
                   isLiquidatable: accountData.isLiquidatable,
                   isAtRisk: accountData.isAtRisk,
                   status: accountData.isLiquidatable
@@ -426,32 +429,48 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const results = await aaveClient.batchAnalyzeLiquidation(addresses);
 
+        // Calculate summary statistics
+        let liquidatable = 0;
+        let atRisk = 0;
+        let healthy = 0;
+        let failed = 0;
+
+        const formattedResults = results.map((r) => {
+          // Count statistics
+          if (r.error) {
+            failed++;
+          } else if (r.opportunity?.riskLevel === 'HIGH') {
+            liquidatable++;
+          } else if (r.opportunity) {
+            atRisk++;
+          } else {
+            healthy++;
+          }
+
+          return {
+            address: r.address,
+            status: r.error
+              ? 'ERROR'
+              : r.opportunity
+              ? r.opportunity.riskLevel === 'HIGH'
+                ? 'LIQUIDATABLE'
+                : 'AT_RISK'
+              : 'HEALTHY',
+            healthFactor: r.opportunity?.healthFactor || 'N/A',
+            totalDebtUSD: r.opportunity?.totalDebtUSD || '0',
+            riskLevel: r.opportunity?.riskLevel || 'NONE',
+            error: r.error,
+          };
+        });
+
         const summary = {
           totalChecked: addresses.length,
-          liquidatable: 0,
-          atRisk: 0,
-          healthy: 0,
-          results: results.map((r) => {
-            if (r.opportunity?.riskLevel === 'HIGH') {
-              summary.liquidatable++;
-            } else if (r.opportunity) {
-              summary.atRisk++;
-            } else {
-              summary.healthy++;
-            }
-
-            return {
-              address: r.address,
-              status: r.opportunity
-                ? r.opportunity.riskLevel === 'HIGH'
-                  ? 'LIQUIDATABLE'
-                  : 'AT_RISK'
-                : 'HEALTHY',
-              healthFactor: r.opportunity?.healthFactor || 'N/A',
-              totalDebtUSD: r.opportunity?.totalDebtUSD || '0',
-              riskLevel: r.opportunity?.riskLevel || 'NONE',
-            };
-          }),
+          successful: addresses.length - failed,
+          failed,
+          liquidatable,
+          atRisk,
+          healthy,
+          results: formattedResults,
         };
 
         return {
