@@ -22,6 +22,7 @@ export interface UserReserveData {
   currentStableDebt: bigint;
   currentVariableDebt: bigint;
   usageAsCollateralEnabled: boolean;
+  decimals: number;
   balanceFormatted: string;
   debtFormatted: string;
   liquidationBonus: bigint;

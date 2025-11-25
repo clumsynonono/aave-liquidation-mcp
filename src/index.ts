@@ -206,12 +206,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                   availableBorrowsUSD: parseFloat(
                     ethers.formatUnits(accountData.availableBorrowsBase, 8)
                   ).toFixed(2),
-                  liquidationThreshold: parseFloat(
-                    ethers.formatUnits(accountData.currentLiquidationThreshold, 4)
-                  ).toFixed(2),
-                  ltv: parseFloat(
-                    ethers.formatUnits(accountData.ltv, 4)
-                  ).toFixed(2),
+                  liquidationThreshold: (Number(accountData.currentLiquidationThreshold) / 100).toFixed(2),
+                  ltv: (Number(accountData.ltv) / 100).toFixed(2),
                   isLiquidatable: accountData.isLiquidatable,
                   isAtRisk: accountData.isAtRisk,
                   status: accountData.isLiquidatable
@@ -324,11 +320,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     symbol: r.symbol,
                     address: r.tokenAddress,
                     decimals: r.decimals,
-                    ltv: (parseFloat(r.ltv.toString()) / 1e4).toFixed(2) + '%',
-                    liquidationThreshold:
-                      (parseFloat(r.liquidationThreshold.toString()) / 1e4).toFixed(2) + '%',
-                    liquidationBonus:
-                      (parseFloat(r.liquidationBonus.toString()) / 1e4 - 100).toFixed(2) + '%',
+                    ltv: (Number(r.ltv) / 100).toFixed(2) + '%',
+                    liquidationThreshold: (Number(r.liquidationThreshold) / 100).toFixed(2) + '%',
+                    liquidationBonus: ((Number(r.liquidationBonus) - 10000) / 100).toFixed(2) + '%',
                     canBeCollateral: r.usageAsCollateralEnabled,
                     canBeBorrowed: r.borrowingEnabled,
                     isActive: r.isActive,
