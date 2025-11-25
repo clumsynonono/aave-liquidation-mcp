@@ -284,9 +284,9 @@ export class AaveClient {
       totalCollateralUSD,
       totalDebtUSD,
       availableBorrowsUSD,
-      liquidationThreshold: (
-        Number(ethers.formatUnits(accountData.currentLiquidationThreshold, 4)) || 0
-      ).toFixed(2),
+      liquidationThreshold: parseFloat(
+        ethers.formatUnits(accountData.currentLiquidationThreshold, 4)
+      ),
       collateralAssets: collateral,
       debtAssets: debt,
       potentialProfit,
@@ -381,14 +381,14 @@ export class AaveClient {
       const totalSupplyVal = parseFloat(ethers.formatUnits(totalSupply, reserve.decimals));
       const totalBorrowVal = parseFloat(ethers.formatUnits(totalBorrow, reserve.decimals));
 
-      let utilizationRate = '0%';
+      let utilizationRate = '0';
       if (totalSupplyVal > 0) {
-        utilizationRate = ((totalBorrowVal / totalSupplyVal) * 100).toFixed(2) + '%';
+        utilizationRate = (totalBorrowVal / totalSupplyVal).toFixed(4);
       }
 
-      // APYs are in ray (1e27)
-      const supplyAPY = (parseFloat(ethers.formatUnits(reserveData.liquidityRate, 27)) * 100).toFixed(2) + '%';
-      const borrowAPY = (parseFloat(ethers.formatUnits(reserveData.variableBorrowRate, 27)) * 100).toFixed(2) + '%';
+      // APYs are in ray (1e27); keep as decimal fractions (e.g. 0.05 for 5%)
+      const supplyAPY = parseFloat(ethers.formatUnits(reserveData.liquidityRate, 27)).toFixed(4);
+      const borrowAPY = parseFloat(ethers.formatUnits(reserveData.variableBorrowRate, 27)).toFixed(4);
 
       return {
         symbol: reserve.symbol,
