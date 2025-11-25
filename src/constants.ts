@@ -39,6 +39,7 @@ export const ERC20_ABI = [
   'function decimals() external view returns (uint8)',
   'function symbol() external view returns (string)',
   'function balanceOf(address account) external view returns (uint256)',
+  'function totalSupply() external view returns (uint256)',
 ];
 
 /**
