@@ -59,3 +59,9 @@ export interface Config {
   rpcUrl: string;
   healthFactorThreshold: number;
 }
+
+export interface BatchAnalysisResult {
+  address: string;
+  opportunity: LiquidationOpportunity | null;
+  error?: string;
+}
