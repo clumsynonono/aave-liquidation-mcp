@@ -57,10 +57,36 @@ async function testRealData() {
     console.log('deployed on Ethereum mainnet. You can verify every address on Etherscan.');
     console.log('\nThe data is as real as it gets - directly from the blockchain! 🎉');
 
-  } catch (error) {
-    console.error('❌ Error:', error);
-    console.log('\nNote: Public RPC endpoints may be rate-limited.');
-    console.log('For production use, get a free API key from Alchemy or Infura.');
+  } catch (error: any) {
+    console.error('❌ Error:', error.message);
+
+    // Enhanced error handling with specific guidance
+    if (error.code === 'NETWORK_ERROR') {
+      console.log('\n🔧 Network Error Details:');
+      console.log('• RPC endpoint may be rate-limited or unavailable');
+      console.log('• Try using a different public RPC or get a free API key');
+      console.log('• Suggested RPC providers: Alchemy, Infura, QuickNode');
+    } else if (error.code === 'CALL_EXCEPTION') {
+      console.log('\n🔧 Contract Error Details:');
+      console.log('• Contract call failed - check contract addresses');
+      console.log('• Verify Aave V3 Pool address is correct');
+      console.log(`• Current Pool: ${AAVE_V3_POOL}`);
+    } else if (error.code === 'TIMEOUT') {
+      console.log('\n🔧 Timeout Error Details:');
+      console.log('• Request timed out - network may be slow');
+      console.log('• Try again or use a faster RPC endpoint');
+    } else {
+      console.log('\n🔧 General Error Details:');
+      console.log('• Unexpected error occurred');
+      console.log('• Check your internet connection');
+      console.log('• Verify all dependencies are installed');
+    }
+
+    console.log('\n💡 Quick Fix Options:');
+    console.log('1. Try a different RPC endpoint');
+    console.log('2. Check if you have internet connectivity');
+    console.log('3. Verify contract addresses are up to date');
+    console.log('4. Run: npm install to ensure dependencies are installed');
   }
 }
 

@@ -11,7 +11,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node build/index.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:real-data": "node build/test-real-data.js",
+    "demo:price": "node build/demo-get-price.js",
+    "demo:reserves": "node build/demo-get-reserves.js"
   },
   "keywords": [
     "mcp",
