@@ -4,8 +4,13 @@
  */
 
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const AAVE_V3_POOL_DATA_PROVIDER = '0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3';
+const RPC_URL = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
 
 const DATA_PROVIDER_ABI = [
   'function getAllReservesTokens() external view returns (tuple(string symbol, address tokenAddress)[])',
@@ -15,7 +20,7 @@ async function getAaveReserves() {
   try {
     console.log('🏦 Fetching Aave V3 reserves data...\n');
 
-    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
     const dataProviderContract = new ethers.Contract(AAVE_V3_POOL_DATA_PROVIDER, DATA_PROVIDER_ABI, provider);
 
     const reservesTokens = await dataProviderContract.getAllReservesTokens();

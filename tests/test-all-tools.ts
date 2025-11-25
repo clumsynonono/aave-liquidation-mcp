@@ -4,9 +4,13 @@
  */
 
 import { AaveClient } from '../src/aave-client.js';
+import dotenv from 'dotenv';
 
-// Using public RPC endpoint
-const PUBLIC_RPC = 'https://eth.llamarpc.com';
+// Load environment variables
+dotenv.config();
+
+// Using environment variable with fallback to public RPC endpoint
+const PUBLIC_RPC = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
 
 // Known addresses for testing (these are public Aave protocol contracts and known users)
 const TEST_ADDRESSES = {
