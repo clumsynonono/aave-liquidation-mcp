@@ -48,7 +48,7 @@ export interface LiquidationOpportunity {
   totalCollateralUSD: string;
   totalDebtUSD: string;
   availableBorrowsUSD: string;
-  liquidationThreshold: string;
+  liquidationThreshold: number;
   collateralAssets: UserReserveData[];
   debtAssets: UserReserveData[];
   potentialProfit?: string;
