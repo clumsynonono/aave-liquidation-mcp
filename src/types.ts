@@ -24,6 +24,7 @@ export interface UserReserveData {
   usageAsCollateralEnabled: boolean;
   balanceFormatted: string;
   debtFormatted: string;
+  liquidationBonus: bigint;
 }
 
 export interface ReserveData {
@@ -51,6 +52,7 @@ export interface LiquidationOpportunity {
   debtAssets: UserReserveData[];
   potentialProfit?: string;
   riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  gasWarning?: string;
 }
 
 export interface Config {
